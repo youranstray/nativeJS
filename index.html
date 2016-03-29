@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>native JS</title>
+	<link rel="stylesheet" href="">
+	<script type="text/javascript">
+		var whenReady = (function () {
+			var funcs = [];
+			var ready = false;
+
+			function handler(e) {
+				var e = e || event;
+
+				if(ready) return;
+
+				if(e.type === "readystatechange" && document.readyState !== "complete") return;
+
+				for(var i = 0; i < funcs.length; i++) {
+					funcs[i].call(document);
+					ready = true;
+					funcs = null;
+				}
+			}
+
+			if(document.addEventListener) {
+				document.addEventListener("DOMContentLoaded", handler, false);
+				document.addEventListener("readyState", handler, false);
+				window.addEventListener("load", handler, false);
+			}else if(document.attachEvent) {
+				document.attachEvent("onreadystatechange", handler, false);
+				window.attachEvent("onload", handler, false);
+			}
+
+			return function whenReady (f) {
+				if(ready) f.call(document);
+				else funcs.push(f);
+			}
+		});
+		whenReady();
+
+		function getScrollOffsets(w) {
+			w = w || window;
+
+			if(w.pageXOffset != null) {
+				return {x: w.pageXOffset, y: w.pageYOffset};
+			}
+
+			var d = w.document;
+			if(document.compatMode == "CSS1Compat"){
+				return {x: d.documentElement.scrollLeft, y: d.documentElement.scrollTop};
+			}
+
+			return {x: d.body.scrollLeft, y: d.body.scrollTop}
+		};
+
+		function drag (elementToDrag, event) {
+			var scroll = getScrollOffsets();
+			var startX = event.clientX + scroll.x;
+			var startY = event.clientY + scroll.y;
+
+			var origX = elementToDrag.offsetLeft;
+			var origY = elementToDrag.offsetTop;
+
+			var deltaX = startX - origX;
+			var deltaY = startY - origY;
+
+			//兼容IE
+			if(document.addEventListener) {
+				document.addEventListener("mousemove", moveHandler, true);
+				document.addEventListener("mouseup", upHandler, true);
+			}else if(document.attachEvent) {
+				elementToDrag.setCapture();
+				elementToDrag.attachEvent("onmousemove", moveHandler);
+				elementToDrag.attachEvent("onmouseup", upHandler);
+				elementToDrag.attachEvent("onlosecapture", upHandler);
+			}
+
+			//兼容IE
+			if(event.stopPropagation) event.stopPropagation();
+			else event.cancelBubble = true;
+
+			if(event.preventDefault) event.preventDefault();
+			else event.returnValue = false;
+		}
+
+		function moveHandler(e) {
+			e = e || window.event;
+
+			var scroll = getScrollOffsets();
+			elementToDrag.style.left = (e.clientX + scroll.x - deltaX) + "px";
+			elementToDrag.style.left = (e.clientY + scroll.y - deltaY) + "px";
+			if(e.stopPropagation) {
+				e.stopPropagation();
+			}else {
+				e.cancelBubble = true;
+			}
+
+		}
+
+		function upHandler(e) {
+			e = e || window.event;
+
+			//兼容IE
+			if(document.removeEventListener) {
+				document.removeEventListener("mouseup", upHandler, true);
+				document.removeEventListener("mousemove", moveHandler, true);
+			}else if(document.detachEvent) {
+				elementToDrag.detachEvent("onlosecapture", upHandler, true);
+				elementToDrag.detachEvent("onmouseup", upHandler);
+				elementToDrag.detachEvent("onmousemove", moveHandler);
+				elementToDrag.releaseCapture();
+			}
+			if(e.stopPropagation){
+				e.stopPropagation();
+			}else{
+				e.cancelBubble = true;
+			}
+		}
+
+	</script>
+</head>
+<body>
+	<div style="position: absolute; left: 100px; top: 100px; width:250px; background: white; border: 1px solid black;">
+		<div style="background: gray; border-bottom: 1px dotted black; padding: 3px; font-family:sans-serif; font-weight: bold;" onmousedown="drag(this.parentNode, event);"></div>
+		<p>这是一个测试。测试中，测试中，测试中，</p><p>测试</p><p>测试</p>
+	</div>
+</body>
+</html>
